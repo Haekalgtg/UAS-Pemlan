@@ -3,6 +3,8 @@
 #include <string.h>
 
 #define MAX_BOOKS 100
+#define MAX_MEMBERS 100
+#define PASSWORD "12345"
 
 typedef struct {
     int id;
@@ -11,8 +13,17 @@ typedef struct {
     int year;
 } Book;
 
+typedef struct {
+    int member_id;
+    char name[100];
+    char address[100];
+    char phone[15];
+} Member;
+
 Book library[MAX_BOOKS];
+Member members[MAX_MEMBERS];
 int book_count = 0;
+int member_count = 0;
 
 void saveToFile() {
     FILE *file = fopen("library_data.txt", "w");
@@ -24,22 +35,55 @@ void saveToFile() {
         fprintf(file, "%d|%s|%s|%d\n", library[i].id, library[i].title, library[i].author, library[i].year);
     }
     fclose(file);
+    
+    // Save member data
+    file = fopen("members_data.txt", "w");
+    if (!file) {
+        printf("Error membuka file anggota!\n");
+        return;
+    }
+    for (int i = 0; i < member_count; i++) {
+        fprintf(file, "%d|%s|%s|%s\n", members[i].member_id, members[i].name, members[i].address, members[i].phone);
+    }
+    fclose(file);
 }
 
 void loadFromFile() {
     FILE *file = fopen("library_data.txt", "r");
     if (!file) {
-        printf("File tidak ditemukan. Memulai dengan data awal.\n");
-
-        // Menambahkan data awal
-        library[book_count++] = (Book){1, "C Programming Language", "Brian W. Kernighan and Dennis M. Ritchie", 1978};
+        printf("File buku tidak ditemukan. Memulai dengan data awal.\n");
+        
+        library[book_count++] = (Book){1, "Programming Language", "Brian W. Kernighan and Dennis M. Ritchie", 1978};
         library[book_count++] = (Book){2, "Clean Code", "Robert C. Martin", 2008};
         library[book_count++] = (Book){3, "The Pragmatic Programmer", "Andrew Hunt and David Thomas", 1999};
-        saveToFile();
+        library[book_count++] = (Book){4, "Design Patterns", "Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides", 1994};
+        library[book_count++] = (Book){6, "Introduction to Algorithms", "Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest", 2009};
+        library[book_count++] = (Book){5, "Head First Java", "Kathy Sierra, Bert Bates", 2003};
+        library[book_count++] = (Book){9, "Computer Networking: A Top-Down Approach", "James F. Kurose, Keith W. Ross", 2017};
+        library[book_count++] = (Book){8, "Artificial Intelligence: A Modern Approach", "Stuart Russell, Peter Norvig", 2010};
+        library[book_count++] = (Book){7, "Code Complete", "Steve McConnell", 2004};
+        library[book_count++] = (Book){10, "Operating Systems: Three Easy Pieces", "Remzi H. Arpaci-Dusseau, Andrea C. Arpaci-Dusseau", 2018};
+        saveToFile(); // Save books immediately to file
         return;
     }
     while (fscanf(file, "%d|%99[^|]|%99[^|]|%d\n", &library[book_count].id, library[book_count].title, library[book_count].author, &library[book_count].year) != EOF) {
         book_count++;
+    }
+    fclose(file);
+    
+    // Load member data
+    file = fopen("members_data.txt", "r");
+    if (!file) {
+        printf("File anggota tidak ditemukan. Memulai dengan data anggota awal.\n");
+        
+        members[member_count++] = (Member){1, "haekal", "123 Elm Street", "555-1234"};
+        members[member_count++] = (Member){2, "bagas", "456 Oak Avenue", "555-5678"};
+        members[member_count++] = (Member){3, "bagus", "789 Pine Road", "555-8765"};
+        saveToFile(); // Save members immediately to file
+        return;
+    }
+    while (fscanf(file, "%d|%99[^|]|%99[^|]|%99[^\n]\n", &members[member_count].member_id, members[member_count].name, members[member_count].address, members[member_count].phone) != EOF) {
+        member_count++;
     }
     fclose(file);
 }
@@ -52,12 +96,12 @@ void addBook() {
     printf("Masukkan ID Buku: ");
     scanf("%d", &library[book_count].id);
     printf("Masukkan Judul Buku: ");
-    getchar(); 
+    getchar();
     fgets(library[book_count].title, 100, stdin);
-    library[book_count].title[strcspn(library[book_count].title, "\n")] = 0; 
+    library[book_count].title[strcspn(library[book_count].title, "\n")] = 0;
     printf("Masukkan Penulis Buku: ");
     fgets(library[book_count].author, 100, stdin);
-    library[book_count].author[strcspn(library[book_count].author, "\n")] = 0; 
+    library[book_count].author[strcspn(library[book_count].author, "\n")] = 0;
     printf("Masukkan Tahun Terbit: ");
     scanf("%d", &library[book_count].year);
 
@@ -152,40 +196,195 @@ void searchBook() {
     printf("Buku dengan ID %d tidak ditemukan.\n", target_id);
 }
 
+void borrowBook() {
+    int target_id;
+    printf("Masukkan ID buku yang ingin dipinjam: ");
+    scanf("%d", &target_id);
+
+    for (int i = 0; i < book_count; i++) {
+        if (library[i].id == target_id) {
+            printf("\nBuku berhasil dipinjam:\n");
+            printf("ID: %d\nJudul: %s\nPenulis: %s\nTahun: %d\n",
+                   library[i].id, library[i].title, library[i].author, library[i].year);
+
+            for (int j = i; j < book_count - 1; j++) {
+                library[j] = library[j + 1];
+            }
+            book_count--;
+            saveToFile();
+            return;
+        }
+    }
+    printf("Buku dengan ID %d tidak ditemukan.\n", target_id);
+}
+
+void registerMember() {
+    if (member_count >= MAX_MEMBERS) {
+        printf("Jumlah anggota sudah mencapai batas maksimal!\n");
+        return;
+    }
+
+    printf("Masukkan ID Anggota: ");
+    scanf("%d", &members[member_count].member_id);
+    printf("Masukkan Nama Anggota: ");
+    getchar();
+    fgets(members[member_count].name, 100, stdin);
+    members[member_count].name[strcspn(members[member_count].name, "\n")] = 0;
+
+    printf("Masukkan Alamat Anggota: ");
+    fgets(members[member_count].address, 100, stdin);
+    members[member_count].address[strcspn(members[member_count].address, "\n")] = 0;
+
+    printf("Masukkan Nomor Telepon Anggota: ");
+    fgets(members[member_count].phone, 15, stdin);
+    members[member_count].phone[strcspn(members[member_count].phone, "\n")] = 0;
+
+    member_count++;
+    printf("Anggota berhasil didaftarkan!\n");
+}
+
+void searchMember() {
+    char target_name[100];
+    printf("Masukkan nama anggota yang ingin dicari: ");
+    getchar();
+    fgets(target_name, 100, stdin);
+    target_name[strcspn(target_name, "\n")] = 0;
+
+    for (int i = 0; i < member_count; i++) {
+        if (strcmp(members[i].name, target_name) == 0) {
+            printf("\nAnggota ditemukan:\n");
+            printf("ID: %d\nNama: %s\nAlamat: %s\nTelepon: %s\n", members[i].member_id, members[i].name, members[i].address, members[i].phone);
+            
+            int choice;
+            do {
+                printf("\n=== Menu Peminjam Buku ===\n");
+                printf("1. Tampilkan Semua Buku\n");
+                printf("2. Cari Buku\n");
+                printf("3. Pinjam Buku\n");
+                printf("4. Kembali\n");
+                printf("Pilih menu: ");
+                scanf("%d", &choice);
+
+                switch (choice) {
+                    case 1:
+                        displayBooks();
+                        system("pause");
+                        break;
+                    case 2:
+                        searchBook();
+                        system("pause");
+                        break;
+                    case 3:
+                        borrowBook();
+                        system("pause");
+                        break;
+                    case 4:
+                        break;
+                    default:
+                        printf("Pilihan tidak valid!\n");
+                        system("pause");
+                }
+            } while (choice != 4);
+            return;
+        }
+    }
+    printf("Anggota dengan nama %s tidak ditemukan.\n", target_name);
+}
+
+int loginAsEmployee() {
+    char input_password[100];
+    printf("Masukkan password pegawai: ");
+    scanf("%s", input_password);
+
+    if (strcmp(input_password, PASSWORD) == 0) {
+        printf("Login berhasil!\n");
+        return 1;
+    } else {
+        printf("Password salah!\n");
+        return 0;
+    }
+}
+
 int main() {
-    int choice;
+    int role;
     loadFromFile();
 
     do {
         system("cls");
-        printf("\n=== Manajemen Buku Perpustakaan ===\n");
-        printf("1. Tambah Buku\n");
-        printf("2. Tampilkan Semua Buku\n");
-        printf("3. Cari Buku\n");
-        printf("4. Keluar\n");
-        printf("Pilih menu: ");
-        scanf("%d", &choice);
+        printf("\n=== Selamat Datang di Perpustakaan ===\n");
+        printf("1. Masuk sebagai Peminjam Buku\n");
+        printf("2. Masuk sebagai Pegawai Perpustakaan\n");
+        printf("3. Keluar\n");
+        printf("Pilih peran: ");
+        scanf("%d", &role);
 
-        switch (choice) {
-            case 1:
-                addBook();
-                break;
-            case 2:
-                displayBooks();
-                system("pause");
-                break;
-            case 3:
-                searchBook();
-                system("pause");
-                break;
-            case 4:
-                printf("Keluar dari program.\n");
-                break;
-            default:
-                printf("Pilihan tidak valid!\n");
-                system("pause");
+        if (role == 1) {
+            int choice;
+            do {
+                system("cls");
+                printf("\n=== Menu Peminjam Buku ===\n");
+                printf("1. Daftar Anggota\n");
+                printf("2. Cari Anggota\n");
+                printf("3. Kembali\n");
+                printf("Pilih menu: ");
+                scanf("%d", &choice);
+
+                switch (choice) {
+                    case 1:
+                        registerMember();
+                        system("pause");
+                        break;
+                    case 2:
+                        searchMember();
+                        system("pause");
+                        break;
+                    case 3:
+                        break;
+                    default:
+                        printf("Pilihan tidak valid!\n");
+                        system("pause");
+                }
+            } while (choice != 3);
+        } else if (role == 2) {
+            if (loginAsEmployee()) {
+                int choice;
+                do {
+                    system("cls");
+                    printf("\n=== Menu Pegawai Perpustakaan ===\n");
+                    printf("1. Tambah Buku\n");
+                    printf("2. Tampilkan Semua Buku\n");
+                    printf("3. Cari Buku\n");
+                    printf("4. Kembali\n");
+                    printf("Pilih menu: ");
+                    scanf("%d", &choice);
+
+                    switch (choice) {
+                        case 1:
+                            addBook();
+                            break;
+                        case 2:
+                            displayBooks();
+                            system("pause");
+                            break;
+                        case 3:
+                            searchBook();
+                            system("pause");
+                            break;
+                        case 4:
+                            break;
+                        default:
+                            printf("Pilihan tidak valid!\n");
+                            system("pause");
+                    }
+                } while (choice != 4);
+            }
+        } else if (role == 3) {
+            printf("Keluar dari program.\n");
+        } else {
+            printf("Pilihan tidak valid!\n");
+            system("pause");
         }
-    } while (choice != 4);
+    } while (role != 3);
 
     return 0;
 }
