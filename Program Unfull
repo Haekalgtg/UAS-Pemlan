@@ -1,0 +1,191 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_BOOKS 100
+
+typedef struct {
+    int id;
+    char title[100];
+    char author[100];
+    int year;
+} Book;
+
+Book library[MAX_BOOKS];
+int book_count = 0;
+
+void saveToFile() {
+    FILE *file = fopen("library_data.txt", "w");
+    if (!file) {
+        printf("Error membuka file!\n");
+        return;
+    }
+    for (int i = 0; i < book_count; i++) {
+        fprintf(file, "%d|%s|%s|%d\n", library[i].id, library[i].title, library[i].author, library[i].year);
+    }
+    fclose(file);
+}
+
+void loadFromFile() {
+    FILE *file = fopen("library_data.txt", "r");
+    if (!file) {
+        printf("File tidak ditemukan. Memulai dengan data awal.\n");
+
+        // Menambahkan data awal
+        library[book_count++] = (Book){1, "C Programming Language", "Brian W. Kernighan and Dennis M. Ritchie", 1978};
+        library[book_count++] = (Book){2, "Clean Code", "Robert C. Martin", 2008};
+        library[book_count++] = (Book){3, "The Pragmatic Programmer", "Andrew Hunt and David Thomas", 1999};
+        saveToFile();
+        return;
+    }
+    while (fscanf(file, "%d|%99[^|]|%99[^|]|%d\n", &library[book_count].id, library[book_count].title, library[book_count].author, &library[book_count].year) != EOF) {
+        book_count++;
+    }
+    fclose(file);
+}
+
+void addBook() {
+    if (book_count >= MAX_BOOKS) {
+        printf("Perpustakaan penuh!\n");
+        return;
+    }
+    printf("Masukkan ID Buku: ");
+    scanf("%d", &library[book_count].id);
+    printf("Masukkan Judul Buku: ");
+    getchar(); 
+    fgets(library[book_count].title, 100, stdin);
+    library[book_count].title[strcspn(library[book_count].title, "\n")] = 0; 
+    printf("Masukkan Penulis Buku: ");
+    fgets(library[book_count].author, 100, stdin);
+    library[book_count].author[strcspn(library[book_count].author, "\n")] = 0; 
+    printf("Masukkan Tahun Terbit: ");
+    scanf("%d", &library[book_count].year);
+
+    book_count++;
+    saveToFile();
+    printf("Buku berhasil ditambahkan!\n");
+}
+
+void merge(Book arr[], int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+    Book L[n1], R[n2];
+
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (int i = 0; i < n2; i++)
+        R[i] = arr[m + 1 + i];
+
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        if (L[i].id <= R[j].id) {
+            arr[k] = L[i];
+            i++;
+        } else {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        arr[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        arr[k] = R[j];
+        j++;
+        k++;
+    }
+}
+
+void mergeSort(Book arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        mergeSort(arr, l, m);
+        mergeSort(arr, m + 1, r);
+
+        merge(arr, l, m, r);
+    }
+}
+
+void displayBooks() {
+    if (book_count == 0) {
+        printf("Tidak ada buku di perpustakaan.\n");
+        return;
+    }
+
+    mergeSort(library, 0, book_count - 1);
+
+    printf("\nDaftar Buku:\n");
+    printf("ID | Judul | Penulis | Tahun\n");
+    printf("-----------------------------------------\n");
+    for (int i = 0; i < book_count; i++) {
+        printf("%d | %s | %s | %d\n", library[i].id, library[i].title, library[i].author, library[i].year);
+    }
+}
+
+void searchBook() {
+    int target_id;
+    printf("Masukkan ID buku yang ingin dicari: ");
+    scanf("%d", &target_id);
+
+    mergeSort(library, 0, book_count - 1);
+
+    int l = 0, r = book_count - 1;
+    while (l <= r) {
+        int m = l + (r - l) / 2;
+        if (library[m].id == target_id) {
+            printf("\nBuku ditemukan:\n");
+            printf("ID: %d\nJudul: %s\nPenulis: %s\nTahun: %d\n",
+                   library[m].id, library[m].title, library[m].author, library[m].year);
+            return;
+        }
+        if (library[m].id < target_id)
+            l = m + 1;
+        else
+            r = m - 1;
+    }
+    printf("Buku dengan ID %d tidak ditemukan.\n", target_id);
+}
+
+int main() {
+    int choice;
+    loadFromFile();
+
+    do {
+        system("cls");
+        printf("\n=== Manajemen Buku Perpustakaan ===\n");
+        printf("1. Tambah Buku\n");
+        printf("2. Tampilkan Semua Buku\n");
+        printf("3. Cari Buku\n");
+        printf("4. Keluar\n");
+        printf("Pilih menu: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                addBook();
+                break;
+            case 2:
+                displayBooks();
+                system("pause");
+                break;
+            case 3:
+                searchBook();
+                system("pause");
+                break;
+            case 4:
+                printf("Keluar dari program.\n");
+                break;
+            default:
+                printf("Pilihan tidak valid!\n");
+                system("pause");
+        }
+    } while (choice != 4);
+
+    return 0;
+}
